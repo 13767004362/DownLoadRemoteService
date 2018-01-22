@@ -1,0 +1,40 @@
+apply plugin: 'com.android.library'
+//gradle-retrolambda配置
+apply plugin: 'me.tatarka.retrolambda'
+android {
+    compileSdkVersion 26
+    buildToolsVersion "26.0.2"
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    lintOptions {
+        abortOnError false
+    }
+
+}
+//打包命令：gradlew makeJar
+task makeJar(type: Copy) {
+    delete 'build/libs/DownloadService.jar'
+    from('build/intermediates/bundles/default/')
+    into('build/libs/')
+    include('classes.jar')
+    rename('classes.jar', 'DownloadService.jar')
+}
+makeJar.dependsOn(build)
+dependencies {
+    compile 'com.android.support:appcompat-v7:26.+'
+}

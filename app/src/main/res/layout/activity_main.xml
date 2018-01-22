@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="8dp"
+    tools:context="com.zongke.downloadservicetest.MainActivity">
+
+  <ProgressBar
+      android:id="@+id/main_progressbar_1"
+      android:max="100"
+      style="@android:style/Widget.ProgressBar.Horizontal"
+      android:layout_width="0dp"
+      app:layout_constraintLeft_toLeftOf="parent"
+      app:layout_constraintRight_toLeftOf="@+id/main_button_1"
+      app:layout_constraintTop_toTopOf="@+id/main_button_1"
+      android:layout_marginRight="8dp"
+      app:layout_constraintBottom_toBottomOf="@+id/main_button_1"
+      android:layout_height="wrap_content" />
+    <Button
+        android:id="@+id/main_button_1"
+        android:layout_width="wrap_content"
+        android:text="开始"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_height="wrap_content" />
+
+    <ProgressBar
+        android:id="@+id/main_progressbar_2"
+        android:max="100"
+        style="@android:style/Widget.ProgressBar.Horizontal"
+        android:layout_width="0dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_marginRight="8dp"
+        app:layout_constraintRight_toLeftOf="@+id/main_button_2"
+        app:layout_constraintTop_toTopOf="@+id/main_button_2"
+        app:layout_constraintBottom_toBottomOf="@+id/main_button_2"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/main_button_2"
+        android:layout_width="wrap_content"
+        app:layout_constraintTop_toBottomOf="@+id/main_button_1"
+        android:text="开始"
+        android:layout_marginTop="10dp"
+        app:layout_constraintRight_toRightOf="parent"
+        android:layout_height="wrap_content" />
+
+
+
+</android.support.constraint.ConstraintLayout>
