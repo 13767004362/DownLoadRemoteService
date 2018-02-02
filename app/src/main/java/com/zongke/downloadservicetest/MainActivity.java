@@ -64,7 +64,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (v.getId()) {
             case R.id.main_button_1:
                 if (btn1.getText().toString().equals("开始")) {
-                    serviceClient.startSingleDownloadTask(url1, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baidu.apk", this);
+                    String filePath=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baidu.apk";
+                    serviceClient.startSingleDownloadTask(url1,filePath , this);
                     btn1.setText("暂停");
                 } else if (btn1.getText().toString().equals("重新下载")) {
                     serviceClient.againStartDownloadTask(url1, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baidu.apk", this);
@@ -76,10 +77,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.main_button_2:
                 if (btn2.getText().toString().equals("开始")) {
-                    serviceClient.startMultiDownloadTask(url2, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk", this);
+                    String filePath=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk";
+                    serviceClient.startMultiDownloadTask(url2,filePath , this);
                     btn2.setText("暂停");
                 } else if (btn2.getText().toString().equals("重新下载")) {
-                    serviceClient.againStartDownloadTask(url2, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk", this);
+                    String filePath=Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk";
+                    serviceClient.againStartDownloadTask(url2,filePath , this);
                     btn2.setText("暂停");
                 } else {
                     serviceClient.stopDownloadTask(url2);
