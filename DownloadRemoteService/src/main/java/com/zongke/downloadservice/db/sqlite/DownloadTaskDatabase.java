@@ -29,6 +29,8 @@ public class DownloadTaskDatabase extends SQLiteOpenHelper {
             DownloadTaskConstants._ID + " integer primary key autoincrement," +
             DownloadTaskConstants.COLUMN_START_INDEX + " integer," +
             DownloadTaskConstants.COLUMN_END_INDEX + " integer," +
+            DownloadTaskConstants.COLUMN_CURRENT_INDEX + " integer," +
+            DownloadTaskConstants.COLUMN_ITEM_STATE + " integer," +
             DownloadTaskConstants.COLUMN_THREAD_NAME + " text," +
             DownloadTaskConstants.COLUMN_BIND_TASK_ID + " text"
             + ")";
@@ -37,7 +39,7 @@ public class DownloadTaskDatabase extends SQLiteOpenHelper {
     }
     @Override
     public void onCreate(SQLiteDatabase db) {
-        Log.i(TAG, "下载任务的数据库执行 onCreate()");
+      //  Log.i(TAG, "下载任务的数据库执行 onCreate()");
         db.execSQL(CREATE_DOWNLOAD_TASK);
         db.execSQL(CREATE_DOWNLOAD_ITEM);
     }

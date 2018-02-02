@@ -22,7 +22,15 @@ public interface ServiceClient {
      * @param filePath
      * @param resultListener
      */
-    void startDownloadTask(String url, String filePath, DownLoadResultListener resultListener);
+    void startSingleDownloadTask(String url, String filePath, DownLoadResultListener resultListener);
+
+    /**
+     *  断点下载
+     * @param url
+     * @param filePath
+     * @param resultListener
+     */
+    void startMultiDownloadTask(String url, String filePath, DownLoadResultListener resultListener);
     /**
      * 开启下载任务
      * @param url

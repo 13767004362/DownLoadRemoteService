@@ -36,6 +36,10 @@ public final  class CommonTaskConstants {
     public static final  int task_already_download=116;
 
     /**
+     * 任务下载异常
+     */
+    public static final  int task_download_error=117;
+    /**
      * 下载线程的个数，这里默认是3个
      */
     public static final int DOWNLOAD_THREAD_ACCOUNT=3;
@@ -52,5 +56,18 @@ public final  class CommonTaskConstants {
      * range对应values的前缀
      */
     public static final String RANGE_VALUES_REG_BYTE="bytes=";
+    /**
+     * 每次请求获取最大的byte[]的长度，放置超大文件，获取过多。
+     * 这里，设置2M.
+     */
+    public static  final  long EVERY_REQUEST_MAX_LENGTH=2*1024*1024;
+    /**
+     * 直接下载的模式
+     */
+    public static final int mode_single=1;
+    /**
+     * 断点续传的模式
+     */
+    public static  final  int mode_multi=2;
 
 }

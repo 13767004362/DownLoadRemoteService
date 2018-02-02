@@ -7,7 +7,7 @@ import com.zongke.downloadservice.constants.CommonTaskConstants;
 import com.zongke.downloadservice.db.bean.DownloadTaskBean;
 import com.zongke.downloadservice.db.sqlite.DownloadTaskConstants;
 import com.zongke.downloadservice.okhttp.OkHttpProvider;
-import com.zongke.downloadservice.task.DownLoadTask;
+import com.zongke.downloadservice.task.MultiDownLoadTask;
 import com.zongke.downloadservice.db.bean.DownloadItemBean;
 import com.zongke.downloadservice.utils.BundleBuilder;
 import com.zongke.downloadservice.utils.FileUtils;
@@ -15,7 +15,6 @@ import com.zongke.downloadservice.utils.StringUtils;
 
 import java.io.File;
 import java.io.RandomAccessFile;
-import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,17 +26,18 @@ import okhttp3.Response;
 
 /**
  * Created by ${xinGen} on 2018/1/5.
- * 文件的计算线程
+ *
+ * 文件的计算线程，用于计算多线程断点下载的数据。
  */
 
-public class CalculateThread implements Runnable {
+public class CalculateThread extends BaseThread {
     private static final String TAG = CalculateThread.class.getSimpleName();
-    private DownLoadTask downLoadTask;
-    public CalculateThread(DownLoadTask downLoadTask) {
+    private MultiDownLoadTask downLoadTask;
+    public CalculateThread(MultiDownLoadTask downLoadTask) {
         this.downLoadTask = downLoadTask;
     }
     @Override
-    public void run() {
+    public void runTask() {
         Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
         this.downLoadTask.setCurrentThread(Thread.currentThread());
         Call call = null;
@@ -67,9 +67,7 @@ public class CalculateThread implements Runnable {
                     List<DownloadItemBean> downloadItemBeanList = downLoadTask.getDatabaseClient().queryDownloadItem(StringUtils.createTaskItemQuerySQL(), args);
                     long fileLength=downloadTaskBeanList.get(0).getDownloadTaskLength();
                     downLoadTask.setDownloadTaskLength(downloadTaskBeanList.get(0).getDownloadTaskLength());
-                    for (DownloadItemBean downloadItemBean : downloadItemBeanList) {
-                        this.downLoadTask.offerDownLoadItem(downloadItemBean);
-                    }
+                    this.downLoadTask.getDownloadItemList().addAll(downloadItemBeanList);
                     state = CommonTaskConstants.task_calculate_finish;
                     Log.i(TAG,"数据库中查询到任务对应的多部分下载的数据 : "+downloadItemBeanList.size()+" 文件长度"+fileLength);
                 }
@@ -93,7 +91,7 @@ public class CalculateThread implements Runnable {
                     int threadCount = this.downLoadTask.getThreadCount();
                     //计算每个线程需要下载的数据大小,下一个下载起点是上一个下载的终点
                     long averageCount =( totalLength %threadCount==0)?(totalLength/threadCount):(totalLength/threadCount+1);
-                    List<DownloadItemBean> downloadItemBeanList = new ArrayList<>();
+
                     Log.i(TAG,"数据库中记录当前的下载任务  : "+this.downLoadTask.getDownloadUrl());
                     for (int i = 0; i < threadCount; ++i) {
                         String threadName = UUID.randomUUID().toString();
@@ -106,16 +104,16 @@ public class CalculateThread implements Runnable {
                         DownloadItemBean downloadItemBean = new DownloadItemBean.Builder()
                                 .setThreadName(threadName)
                                 .setStartIndex(startIndex)
+                                .setCurrentIndex(startIndex)
                                 .setEndIndex(endIndex)
                                 .setBindTaskId(downLoadTask.getDownloadUrl())
                                 .builder();
-                        downloadItemBeanList.add(downloadItemBean);
-                        this.downLoadTask.offerDownLoadItem(downloadItemBean);
-                        Log.i(TAG,"计算线程中计算多模块的下载数据  : "+(i+1)+" "+startIndex+" "+endIndex);
+                        this.downLoadTask.getDownloadItemList().add(downloadItemBean);
+                        Log.i(TAG,"计算线程中计算多模块的下载数据  : "+(i+1)+" "+startIndex+" "+endIndex+" 文件总长度 "+totalLength);
                     }
                     this.downLoadTask.setDownloadTaskLength(totalLength);
                     this.downLoadTask.getDatabaseClient().insertDownloadTask(downLoadTask.getDownloadTaskBean());
-                    this.downLoadTask.getDatabaseClient().insertDownloadItem(downloadItemBeanList);
+                    this.downLoadTask.getDatabaseClient().insertDownloadItem(downLoadTask.getDownloadItemList());
                     state = CommonTaskConstants.task_calculate_finish;
                 } else {
                     Log.i(TAG,"计算线程中的网络请求失败  : "+this.downLoadTask.getDownloadUrl());

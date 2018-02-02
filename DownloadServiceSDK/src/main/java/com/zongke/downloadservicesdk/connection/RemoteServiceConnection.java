@@ -34,11 +34,11 @@ public class RemoteServiceConnection {
         return downLoadRemoteService == null ? false : true;
     }
 
-    public void startDownLoadTask(DownLoadTask downLoadTask, DownloadResultReceiver downloadResultReceiver) {
+    public void startDownLoadTask(int mode,DownLoadTask downLoadTask, DownloadResultReceiver downloadResultReceiver) {
         if (isConnection()) {
             try {
               //  Log.i(tag, " downLoadRemoteService startDownLoadTask ");
-                downLoadRemoteService.startDownLoadTask(downLoadTask.getUrl(), downLoadTask.getFilePath(),downloadResultReceiver );
+                downLoadRemoteService.startDownLoadTask(mode,downLoadTask.getUrl(), downLoadTask.getFilePath(),downloadResultReceiver );
             }catch (Exception e){
                 e.printStackTrace();
             }

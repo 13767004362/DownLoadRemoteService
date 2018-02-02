@@ -5,9 +5,7 @@ import android.database.Cursor;
 
 import com.zongke.downloadservice.db.bean.DownloadTaskBean;
 import com.zongke.downloadservice.db.sqlite.DownloadTaskConstants;
-import com.zongke.downloadservice.task.DownLoadTask;
 import com.zongke.downloadservice.db.bean.DownloadItemBean;
-import com.zongke.downloadservice.utils.StringUtils;
 
 /**
  * Created by ${xinGen} on 2018/1/6.
@@ -19,18 +17,29 @@ public class DBUtils {
         return new DownloadItemBean.Builder()
                 .setEndIndex(cursor.getInt(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_END_INDEX)))
                 .setStartIndex(cursor.getInt(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_START_INDEX)))
+                .setCurrentIndex(cursor.getInt(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_CURRENT_INDEX)))
                 .setThreadName(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_THREAD_NAME)))
                 .setBindTaskId(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_BIND_TASK_ID)))
+                .setState(cursor.getInt(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_ITEM_STATE)))
                 .builder();
     }
-
+    public static DownloadTaskBean createDownloadTask(Cursor cursor) {
+        return new DownloadTaskBean.Builder()
+                .setDownloadTaskLength(Long.valueOf(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_TASK_LENGTH))))
+                .setDownloadUrl(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_DOWNLOAD_URL)))
+                .setFilePath(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_WRITE_FILE_PATH)))
+                .setState(cursor.getInt(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_STATE)))
+                .builder();
+    }
     public static ContentValues createContentValues(DownloadItemBean downloadItem) {
         ContentValues contentValues = new ContentValues();
         //url需要转成特殊的字符
         contentValues.put(DownloadTaskConstants.COLUMN_BIND_TASK_ID, downloadItem.getBindTaskId());
         contentValues.put(DownloadTaskConstants.COLUMN_END_INDEX, downloadItem.getEndIndex());
         contentValues.put(DownloadTaskConstants.COLUMN_START_INDEX, downloadItem.getStartIndex());
+        contentValues.put(DownloadTaskConstants.COLUMN_CURRENT_INDEX, downloadItem.getCurrentIndex());
         contentValues.put(DownloadTaskConstants.COLUMN_THREAD_NAME, downloadItem.getThreadName());
+        contentValues.put(DownloadTaskConstants.COLUMN_ITEM_STATE,downloadItem.getState());
         return contentValues;
     }
     public static ContentValues createContentValues(DownloadTaskBean downLoadTask) {
@@ -41,12 +50,5 @@ public class DBUtils {
         contentValues.put(DownloadTaskConstants.COLUMN_STATE,downLoadTask.getState());
         return contentValues;
     }
-    public static DownloadTaskBean createDownloadTask(Cursor cursor) {
-        return new DownloadTaskBean.Builder()
-                .setDownloadTaskLength(Long.valueOf(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_TASK_LENGTH))))
-                .setDownloadUrl(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_DOWNLOAD_URL)))
-                .setFilePath(cursor.getString(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_WRITE_FILE_PATH)))
-                .setState(cursor.getInt(cursor.getColumnIndex(DownloadTaskConstants.COLUMN_STATE)))
-                .builder();
-    }
+
 }

@@ -8,7 +8,7 @@ interface DownLoadRemoteService {
     /**
      * 开启一个下载任务
      */
-     void  startDownLoadTask(String downloadUrl,String filePath,in ResultReceiver resultReceiver);
+     void  startDownLoadTask(int mode,String downloadUrl,String filePath,in ResultReceiver resultReceiver);
      /**
       * 停止一个下载任务
       */

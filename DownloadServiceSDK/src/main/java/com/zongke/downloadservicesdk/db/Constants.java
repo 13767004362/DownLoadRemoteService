@@ -30,5 +30,13 @@ public class Constants {
      * 任务已经下载完成
      */
     public static final  int task_already_download=116;
+    /**
+     * 直接下载的模式
+     */
+    public static final int mode_single=1;
+    /**
+     * 断点续传的模式
+     */
+    public static  final  int mode_multi=2;
 }
 

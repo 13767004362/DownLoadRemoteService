@@ -29,6 +29,8 @@ public final class DownloadTaskConstants implements BaseColumns{
     public static final  String COLUMN_THREAD_NAME="threadName";
     public static final String COLUMN_START_INDEX="startIndex";
     public static final String COLUMN_END_INDEX="endIndex";
+    public static final  String COLUMN_ITEM_STATE="itemState";
+    public static final  String COLUMN_CURRENT_INDEX="currentIndex";
 
 
     /**

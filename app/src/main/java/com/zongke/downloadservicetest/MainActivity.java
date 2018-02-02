@@ -30,6 +30,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initDownloadService();
         initView();
     }
+
+    /**
+     *
+     *  开启远程下载服务，先安装远程下载服务的apk.
+     *
+     */
     private void initDownloadService() {
         try {
             Intent intent = new Intent("com.zongke.downloadservice.service.DownLoadService");
@@ -41,6 +47,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         serviceClient = DownloadServiceClient.getInstance();
         serviceClient.init(getApplicationContext());
     }
+
+    /**
+     * 初始化控件
+     */
     private void initView() {
         this.progressBar1 = (ProgressBar) findViewById(R.id.main_progressbar_1);
         this.progressBar2 = (ProgressBar) findViewById(R.id.main_progressbar_2);
@@ -54,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         switch (v.getId()) {
             case R.id.main_button_1:
                 if (btn1.getText().toString().equals("开始")) {
-                    serviceClient.startDownloadTask(url1, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baidu.apk", this);
+                    serviceClient.startSingleDownloadTask(url1, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baidu.apk", this);
                     btn1.setText("暂停");
                 } else if (btn1.getText().toString().equals("重新下载")) {
                     serviceClient.againStartDownloadTask(url1, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baidu.apk", this);
@@ -66,7 +76,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.main_button_2:
                 if (btn2.getText().toString().equals("开始")) {
-                    serviceClient.startDownloadTask(url2, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk", this);
+                    serviceClient.startMultiDownloadTask(url2, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk", this);
                     btn2.setText("暂停");
                 } else if (btn2.getText().toString().equals("重新下载")) {
                     serviceClient.againStartDownloadTask(url2, Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + File.separator + "baihewang.apk", this);
@@ -80,6 +90,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
         }
     }
+
+    /**
+     * 文件已经下载存在的回调监听
+     * @param url
+     * @param filePath
+     */
     @Override
     public void taskAlreadyDownload(String url, String filePath) {
         Log.i(TAG, " 任务已经先前下载完成 " + url + " 线程是 "+Thread.currentThread().getName());

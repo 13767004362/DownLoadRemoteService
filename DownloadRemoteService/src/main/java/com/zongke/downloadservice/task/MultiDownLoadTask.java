@@ -3,16 +3,23 @@ package com.zongke.downloadservice.task;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.support.v4.os.ResultReceiver;
+import android.util.Log;
 
 import com.zongke.downloadservice.client.DatabaseClient;
+import com.zongke.downloadservice.client.DownLoadClient;
 import com.zongke.downloadservice.constants.CommonTaskConstants;
 import com.zongke.downloadservice.db.bean.DownloadItemBean;
 import com.zongke.downloadservice.db.bean.DownloadTaskBean;
 import com.zongke.downloadservice.thread.CalculateThread;
 import com.zongke.downloadservice.thread.MultiDownloadThread;
 import com.zongke.downloadservice.thread.ThreadManager;
+import com.zongke.downloadservice.utils.BundleBuilder;
+import com.zongke.downloadservice.utils.StringUtils;
 
-import java.util.concurrent.ArrayBlockingQueue;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
 
 import okhttp3.OkHttpClient;
 
@@ -20,7 +27,8 @@ import okhttp3.OkHttpClient;
 /**
  * Created by ${xinGen} on 2017/12/22.
  */
-public class DownLoadTask {
+public class MultiDownLoadTask {
+    private final String TAG = MultiDownLoadTask.class.getSimpleName();
     private DownloadTaskBean downloadTaskBean;
     /**
      * 通讯对象
@@ -30,10 +38,7 @@ public class DownLoadTask {
      * 当前线程对象
      */
     private Thread currentThread;
-    /**
-     * 下载的Runnable接口
-     */
-    private MultiDownloadThread downloadThread;
+
     /**
      * 计算的Runnable接口
      */
@@ -57,20 +62,28 @@ public class DownLoadTask {
     /**
      * 下载线程中的下载任务列表
      */
-    private ArrayBlockingQueue<DownloadItemBean> downloadItemList;
+    private List<DownloadItemBean> downloadItemList;
     /**
      * 是否重新下载的标志：先删除文件和数据库记录
      */
     private boolean isAgainTask;
+    /**
+     * 下载的多线程
+     */
+    private ExecutorService executorService;
+    /**
+     * 是否取消的标志
+     */
+    private volatile boolean isCancel;
+    private DownLoadClient downLoadClient;
 
-
-    public DownLoadTask(ThreadManager threadManager, DatabaseClient databaseClient) {
+    public MultiDownLoadTask(ThreadManager threadManager, DownLoadClient downLoadClient) {
         this.threadManager = threadManager;
-        this.databaseClient = databaseClient;
-        this.downloadItemList = new ArrayBlockingQueue<>(3);
+        this.databaseClient = downLoadClient.getDatabaseClient();
+        this.downLoadClient=downLoadClient;
+        this.downloadItemList = new ArrayList<>();
         this.calculateThread = new CalculateThread(this);
         this.threadCount = CommonTaskConstants.DOWNLOAD_THREAD_ACCOUNT;
-        this.downloadThread = new MultiDownloadThread(this);
     }
 
     /**
@@ -94,6 +107,26 @@ public class DownLoadTask {
 
     public void setDownloadTaskLength(long totalLength) {
         this.downloadTaskBean.setDownloadTaskLength(totalLength);
+    }
+
+    public boolean isCancel() {
+        return isCancel;
+    }
+
+    public void setCancel(boolean cancel) {
+        isCancel = cancel;
+        try {
+            if (getCurrentThread()!=null){
+                getCurrentThread().interrupt();
+            }
+            if (executorService!=null){
+                executorService.shutdownNow();
+                executorService=null;
+            }
+            releaseResource();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
     }
 
     public DownloadTaskBean getDownloadTaskBean() {
@@ -139,12 +172,7 @@ public class DownLoadTask {
         return calculateThread;
     }
 
-    /**
-     * 传递结果
-     */
-    public MultiDownloadThread getDownloadThread() {
-        return downloadThread;
-    }
+
 
     @SuppressLint("RestrictedApi")
     public void deliverResult(int stateCode, Bundle bundle) {
@@ -153,16 +181,12 @@ public class DownLoadTask {
         }
     }
 
-    public void offerDownLoadItem(DownloadItemBean downloadItem) {
-        synchronized (this) {
-            this.downloadItemList.offer(downloadItem);
-        }
+    public List<DownloadItemBean> getDownloadItemList() {
+        return downloadItemList;
     }
 
-    public DownloadItemBean peekDownloadItem() {
-        synchronized (this) {
-            return this.downloadItemList.poll();
-        }
+    public void setDownloadItemList(List<DownloadItemBean> downloadItemList) {
+        this.downloadItemList = downloadItemList;
     }
 
     public int getItemSize() {
@@ -195,30 +219,90 @@ public class DownLoadTask {
         this.resultReceiver = null;
         this.downloadItemList.clear();
         this.downloadTaskBean = null;
-        this.isAgainTask=false;
+        this.isAgainTask = false;
     }
 
     /**
      * 处理 结果
      */
     public void handleResult(int state) {
+        if (isCancel()){
+            return ;
+        }
         switch (state) {
             case CommonTaskConstants.task_download_finish:
+                handlerResult();
+                break;
             case CommonTaskConstants.task_download_failure:
+                downLoadClient.removeMultiDownloadTask(this);
+                break;
             case CommonTaskConstants.task_calculate_failure:
+                downLoadClient.removeMultiDownloadTask(this);
+                break;
             case CommonTaskConstants.task_already_download:
-                this.threadManager.recycleDownloadTask(this);
+                releaseResource();
+                downLoadClient.removeMultiDownloadTask(this);
                 break;
             case CommonTaskConstants.task_calculate_finish:
-                this.threadManager.executeDownloadTask(this);
+                startMultiDownloadThread();
                 break;
             default:
                 break;
         }
     }
 
+    public void handlerProgress() {
+        int total = 0;
+        for (DownloadItemBean downloadItemBean : downloadItemList) {
+            total += downloadItemBean.getUploadLength();
+        }
+        if (isCancel()){
+            return;
+        }
+        //计算出剩余还剩下多少，然后100- 剩余进度=上传进度
+        final int progress = (int) (((total) * 100) / downloadTaskBean.getDownloadTaskLength());
+        Log.i(TAG, "当前线程 " + Thread.currentThread().getName() + " 上传了多少 " + progress);
+        deliverResult(CommonTaskConstants.task_download_progress, BundleBuilder.createBundle(this, progress));
+    }
 
+    private void handlerResult() {
+        int finish = 0;
+        for (DownloadItemBean downloadItemBean : downloadItemList) {
+            if (downloadItemBean.getState() == CommonTaskConstants.task_download_finish) {
+                finish++;
+            }
+        }
+        if (isCancel()){
+            return;
+        }
+        Log.i(TAG, " 当前线程" + Thread.currentThread().getName() + "handlerResult " + finish + " 任务的个数 " + downloadItemList.size());
+        if (finish == downloadItemList.size()) {
+            deliverResult(CommonTaskConstants.task_download_finish, BundleBuilder.createBundle(this));
+            //更新task的记录
+            getDownloadTaskBean().setState(CommonTaskConstants.task_download_finish);
+            getDatabaseClient().updateDownloadTask(getDownloadTaskBean(), StringUtils.createTaskQuerySQL(), new String[]{getDownloadUrl()});
+            //删除对应的item记录
+            getDatabaseClient().deleteDownloadItem(StringUtils.createTaskItemQuerySQL(), new String[]{getDownloadUrl()});
+            Log.i(TAG, " MultiDownloadThread 写入磁盘操作完成");
+            releaseResource();
+            downLoadClient.removeMultiDownloadTask(this);
+        }
+    }
     public DatabaseClient getDatabaseClient() {
         return databaseClient;
+    }
+    /**
+     * 开启下载任务
+     */
+    private void startMultiDownloadThread() {
+        if (isCancel()){
+            return;
+        }
+        executorService = threadManager.createThreadPool(ThreadManager.single_file_down_thread_size);
+        for (DownloadItemBean downloadItemBean : downloadItemList) {
+            if (downloadItemBean.getState() != CommonTaskConstants.task_download_finish) {
+                executorService.execute(new MultiDownloadThread(this, downloadItemBean));
+            }
+        }
     }
 }

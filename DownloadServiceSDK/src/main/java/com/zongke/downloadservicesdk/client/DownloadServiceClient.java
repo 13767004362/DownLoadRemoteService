@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.zongke.downloadservicesdk.connection.RemoteServiceConnection;
 import com.zongke.downloadservicesdk.db.Constants;
@@ -61,14 +62,21 @@ public class DownloadServiceClient implements ServiceClient {
     }
 
     @Override
-    public void startDownloadTask(String url, String filePath, DownLoadResultListener resultListener) {
+    public void startSingleDownloadTask(String url, String filePath, DownLoadResultListener resultListener) {
         if (remoteServiceConnection != null) {
             DownLoadTask downLoadTask = new DownLoadTask(url, filePath, resultListener);
-            this.remoteServiceConnection.startDownLoadTask(downLoadTask, this.resultReceiver);
+            this.remoteServiceConnection.startDownLoadTask(Constants.mode_single,downLoadTask, this.resultReceiver);
             this.downLoadTaskList.add(downLoadTask);
         }
     }
-
+    @Override
+    public void startMultiDownloadTask(String url, String filePath, DownLoadResultListener resultListener) {
+        if (remoteServiceConnection != null) {
+            DownLoadTask downLoadTask = new DownLoadTask(url, filePath, resultListener);
+            this.remoteServiceConnection.startDownLoadTask(Constants.mode_multi,downLoadTask, this.resultReceiver);
+            this.downLoadTaskList.add(downLoadTask);
+        }
+    }
     @Override
     public void againStartDownloadTask(String url, String filePath, DownLoadResultListener resultListener) {
         if (remoteServiceConnection != null) {
@@ -112,7 +120,7 @@ public class DownloadServiceClient implements ServiceClient {
     public void handlerResult(int resultCode, Bundle resultData) {
         String url = resultData.getString(Constants.KEY_DOWN_LOAD_URL);
         int progress = resultData.getInt(Constants.KEY_PROGRESS);
-        // Log.i(TAG, " url " + url + " 进度是：" + progress);
+       // Log.i(TAG, " url " + url + " 进度是：" + progress);
         if (TextUtils.isEmpty(url)) {
             return;
         }

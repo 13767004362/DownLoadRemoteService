@@ -47,18 +47,20 @@ return true;
 case TRANSACTION_startDownLoadTask:
 {
 data.enforceInterface(DESCRIPTOR);
-String _arg0;
-_arg0 = data.readString();
+int _arg0;
+_arg0 = data.readInt();
 String _arg1;
 _arg1 = data.readString();
-android.support.v4.os.ResultReceiver _arg2;
+String _arg2;
+_arg2 = data.readString();
+android.support.v4.os.ResultReceiver _arg3;
 if ((0!=data.readInt())) {
-_arg2 = android.support.v4.os.ResultReceiver.CREATOR.createFromParcel(data);
+_arg3 = android.support.v4.os.ResultReceiver.CREATOR.createFromParcel(data);
 }
 else {
-_arg2 = null;
+_arg3 = null;
 }
-this.startDownLoadTask(_arg0, _arg1, _arg2);
+this.startDownLoadTask(_arg0, _arg1, _arg2, _arg3);
 reply.writeNoException();
 return true;
 }
@@ -110,12 +112,13 @@ return DESCRIPTOR;
 /**
      * 开启一个下载任务
      */
-@Override public void startDownLoadTask(String downloadUrl, String filePath, android.support.v4.os.ResultReceiver resultReceiver) throws android.os.RemoteException
+@Override public void startDownLoadTask(int mode, String downloadUrl, String filePath, android.support.v4.os.ResultReceiver resultReceiver) throws android.os.RemoteException
 {
 android.os.Parcel _data = android.os.Parcel.obtain();
 android.os.Parcel _reply = android.os.Parcel.obtain();
 try {
 _data.writeInterfaceToken(DESCRIPTOR);
+_data.writeInt(mode);
 _data.writeString(downloadUrl);
 _data.writeString(filePath);
 if ((resultReceiver!=null)) {
@@ -185,7 +188,7 @@ static final int TRANSACTION_againStartDownloadTask = (android.os.IBinder.FIRST_
 /**
      * 开启一个下载任务
      */
-public void startDownLoadTask(String downloadUrl, String filePath, android.support.v4.os.ResultReceiver resultReceiver) throws android.os.RemoteException;
+public void startDownLoadTask(int mode, String downloadUrl, String filePath, android.support.v4.os.ResultReceiver resultReceiver) throws android.os.RemoteException;
 /**
       * 停止一个下载任务
       */

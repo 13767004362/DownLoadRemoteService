@@ -4,10 +4,14 @@ import android.support.v4.os.ResultReceiver;
 import android.util.Log;
 
 import com.zongke.downloadservice.client.DatabaseClient;
+import com.zongke.downloadservice.client.DownLoadClient;
 import com.zongke.downloadservice.executor.MainThreadExecutor;
-import com.zongke.downloadservice.task.DownLoadTask;
+import com.zongke.downloadservice.task.SingleDownLoadTask;
+import com.zongke.downloadservice.task.MultiDownLoadTask;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -44,21 +48,25 @@ public class ThreadManager {
      */
     private final BlockingQueue<Runnable> downLoadThreadQueue;
     /**
-     * 复用性，DownLoadTask
+     * 复用性，SingleDownLoadTask
      */
-    private final BlockingQueue<DownLoadTask> downLoadTaskQueue;
+    private final BlockingQueue<SingleDownLoadTask> downLoadTaskQueue;
     /**
      * 主线程
      */
     private final MainThreadExecutor mainThreadExecutor;
     /**
-     * 根据android运行的
+     * 根据android运行的cpu运行个数
      */
     private final int NUMBER_OF_CORE;
-
+    /**
+     * 默认情况下，单文件直接下载的线程个数
+     */
+   public static final  int single_file_down_thread_size=3;
+    
     private ThreadManager() {
-        this.CODE_POOL_SIZE =8;
-        this.maxPoolSize =8;
+        this.CODE_POOL_SIZE =single_file_down_thread_size;
+        this.maxPoolSize =single_file_down_thread_size;
         this.KEEP_ALIVE_TIME = 1;
         this.NUMBER_OF_CORE =Runtime.getRuntime().availableProcessors();
         this.TIME_UNIT = TimeUnit.SECONDS;
@@ -75,35 +83,49 @@ public class ThreadManager {
         }
         return instance;
     }
-
     /**
-     * 从线程池中开启一个线程
+     * 执行文件直接下载
+     *
+     * @param downLoadClient
+     * @param url
+     * @param resultReceiver
+     */
+    public SingleDownLoadTask startSingleDownLoadThread(DownLoadClient downLoadClient, String url, String filePath, ResultReceiver resultReceiver) {
+      SingleDownLoadTask downLoadTask  = this.downLoadTaskQueue.poll();
+      if (downLoadTask==null){
+          downLoadTask=new SingleDownLoadTask(this,downLoadClient);
+          downLoadTask.setDownloadUrl(url);
+          downLoadTask.setFilePath(filePath);
+          downLoadTask.setOkHttpClient(downLoadClient.getOkHttpClient());
+          downLoadTask.setResultReceiver(resultReceiver);
+      }
+      this.executeDownloadTask(downLoadTask.getDownloadThread());
+      return  downLoadTask;
+    }
+    /**
+     * 执行文件多线程断点下载
      *
      * @param okHttpClient
      * @param url
      * @param resultReceiver
      */
-    public DownLoadTask startDownLoadThread(DatabaseClient databaseClient,OkHttpClient okHttpClient, String url, String filePath, ResultReceiver resultReceiver) {
-       return startDownLoadThread(databaseClient,okHttpClient,url,filePath,resultReceiver,false);
+    public MultiDownLoadTask startMultiDownLoadThread(DownLoadClient downLoadClient, OkHttpClient okHttpClient, String url, String filePath, ResultReceiver resultReceiver) {
+       return startMultiDownLoadThread(downLoadClient,okHttpClient,url,filePath,resultReceiver,false);
     }
-    public DownLoadTask startDownLoadThread(DatabaseClient databaseClient,OkHttpClient okHttpClient, String url, String filePath, ResultReceiver resultReceiver,boolean isAgain) {
+    public MultiDownLoadTask startMultiDownLoadThread(DownLoadClient downLoadClient, OkHttpClient okHttpClient, String url, String filePath, ResultReceiver resultReceiver, boolean isAgain) {
         Log.i(TAG, "start download task 下载地址是：" + url);
-        DownLoadTask downLoadTask = this.downLoadTaskQueue.poll();
-        if (downLoadTask == null) {
-            downLoadTask = new DownLoadTask(this,databaseClient);
-            downLoadTask.setOkHttpClient(okHttpClient);
-        }
+        MultiDownLoadTask downLoadTask = new MultiDownLoadTask(this,downLoadClient);
+        downLoadTask.setOkHttpClient(okHttpClient);
         downLoadTask.setAgainTask(isAgain);
         downLoadTask.init(url,filePath,resultReceiver);
-        this.executeCalculateTask(downLoadTask);
+        this.executeCalculateTask(downLoadTask.getCalculateThread());
         return downLoadTask;
     }
-
     /**
      * 停止全部下载任务的线程
      */
     public void stopAllDownloadTask() {
-        DownLoadTask[] downLoadTasks = new DownLoadTask[this.downLoadTaskQueue.size()];
+        SingleDownLoadTask[] downLoadTasks = new SingleDownLoadTask[this.downLoadTaskQueue.size()];
         this.downLoadTaskQueue.toArray(downLoadTasks);
         int taskSize = downLoadTasks.length;
         synchronized (this) {
@@ -120,7 +142,7 @@ public class ThreadManager {
      *
      * @param downLoadTask
      */
-    public void stopDownloadThread(DownLoadTask downLoadTask) {
+    public void stopSingleDownloadThread(SingleDownLoadTask downLoadTask) {
         this.executorTask(() -> {
             if (downLoadTask != null) {
                 Log.i(TAG, "停止任务，地址是：" + downLoadTask.getDownloadUrl());
@@ -128,7 +150,6 @@ public class ThreadManager {
                 if (currentThread != null) {
                     currentThread.interrupt();
                 }
-                this.calculateThreadQueue.remove(downLoadTask.getCalculateThread());
                 this.downLoadThreadQueue.remove(downLoadTask.getDownloadThread());
             }
         });
@@ -138,7 +159,7 @@ public class ThreadManager {
      *
      * @param downLoadTask
      */
-    public void recycleDownloadTask(DownLoadTask downLoadTask) {
+    public void recycleDownloadTask(SingleDownLoadTask downLoadTask) {
         this.executorTask(() -> {
             Log.i(TAG, "回收任务，地址是：" + downLoadTask.getDownloadUrl());
             downLoadTask.releaseResource();
@@ -146,18 +167,26 @@ public class ThreadManager {
         });
     }
     /**
-     * 执行计算任务
-     * @param downLoadTask
+     * 创建指定线程个数的线程池
+     * @param number
+     * @return
      */
-    private void executeCalculateTask(DownLoadTask downLoadTask){
-        this.calculatePoolExecutor.execute(downLoadTask.getCalculateThread());
+    public ExecutorService createThreadPool(int number){
+      return Executors.newFixedThreadPool(number);
+    }
+    /**
+     * 执行计算任务
+     * @param runnable
+     */
+    private void executeCalculateTask(Runnable runnable){
+        this.calculatePoolExecutor.execute(runnable);
     }
     /**
      * 执行完计算后，执行下载任务
-     * @param downLoadTask
+     * @param runnable
      */
-    public void executeDownloadTask(DownLoadTask downLoadTask){
-        this.downLoadPoolExecutor.execute(downLoadTask.getDownloadThread());
+    public void executeDownloadTask(Runnable runnable){
+        this.downLoadPoolExecutor.execute(runnable);
     }
     /**
      * 执行任务

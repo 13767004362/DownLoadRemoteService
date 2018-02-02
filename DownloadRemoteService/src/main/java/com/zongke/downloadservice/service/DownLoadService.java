@@ -10,6 +10,7 @@ import android.support.v4.os.ResultReceiver;
 import com.zongke.downloadservice.DownLoadRemoteService;
 import com.zongke.downloadservice.client.DatabaseClient;
 import com.zongke.downloadservice.client.DownLoadClient;
+import com.zongke.downloadservice.constants.CommonTaskConstants;
 
 /**
  * Created by ${xingen} on 2017/12/22.
@@ -45,8 +46,15 @@ public class DownLoadService extends Service {
      */
     private final DownLoadRemoteService.Stub mBinder = new DownLoadRemoteService.Stub() {
         @Override
-        public void startDownLoadTask(String downloadUrl, String filePath, ResultReceiver resultReceiver) throws RemoteException {
-            client.startDownloadTask(downloadUrl, filePath, resultReceiver);
+        public void startDownLoadTask(int mode,String downloadUrl, String filePath, ResultReceiver resultReceiver) throws RemoteException {
+            switch (mode){
+                case CommonTaskConstants.mode_single:
+                    client.startSingDownloadTask(downloadUrl, filePath, resultReceiver);
+                    break;
+                case CommonTaskConstants.mode_multi:
+                    client.startMultiDownloadTask(downloadUrl, filePath, resultReceiver);
+                    break;
+            }
         }
         @Override
         public void stopDownloadTask(String downloadUrl) throws RemoteException {
